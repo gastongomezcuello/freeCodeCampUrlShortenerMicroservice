@@ -47,31 +47,52 @@ mongoose.connect(process.env.MONGO_URL, {
   useUnifiedTopology: true,
 });
 
+// only http or https urls are allowed
+app.post("/api/shorturl", (req, res, next) => {
+  const url = req.body.url;
+  const regex = /^(http|https):\/\//;
+
+  if (!regex.test(url)) {
+    res.json({ error: "invalid URL" });
+  } else {
+    next();
+  }
+});
+
 app.post("/api/shorturl", (req, res) => {
   const url = req.body.url;
 
-  Url.findOne({ original_url: url }).then((data) => {
-    if (data) {
-      res.json({
-        original_url: data.original_url,
-        short_url: data.short_url,
-      });
-    } else {
-      Url.countDocuments().then((count) => {
-        const newUrl = new Url({
-          original_url: url,
-          short_url: count + 1,
-        });
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:") {
+      return res.json({ error: "invalid url" });
+    }
 
-        newUrl.save().then((data) => {
-          res.json({
-            original_url: data.original_url,
-            short_url: data.short_url,
+    Url.findOne({ original_url: url }).then((data) => {
+      if (data) {
+        res.json({
+          original_url: data.original_url,
+          short_url: data.short_url,
+        });
+      } else {
+        Url.countDocuments().then((count) => {
+          const newUrl = new Url({
+            original_url: url,
+            short_url: count + 1,
+          });
+
+          newUrl.save().then((data) => {
+            res.json({
+              original_url: data.original_url,
+              short_url: data.short_url,
+            });
           });
         });
-      });
-    }
-  });
+      }
+    });
+  } catch (err) {
+    res.json({ error: "invalid url" });
+  }
 });
 
 app.get("/api/shorturl/:short_url", (req, res) => {
