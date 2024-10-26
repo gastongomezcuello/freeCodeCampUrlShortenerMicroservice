@@ -76,12 +76,11 @@ app.post("/api/shorturl", (req, res) => {
 
 app.get("/api/shorturl/:short_url", (req, res) => {
   const short_url = req.params.short_url;
-  Url.findOne({ short_url: short_url }, (err, data) => {
-    if (err) {
-      console.error(err);
-      res.json({ error: "invalid url" });
-    } else {
+  Url.findOne({ short_url: short_url })
+    .then((data) => {
       res.redirect = data.original_url;
-    }
-  });
+    })
+    .catch((err) => {
+      res.json({ error: "No short URL found for the given input" });
+    });
 });
